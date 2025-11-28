@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>30 Ngày Thay Đổi Bản Thân</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        transition: 0.3s;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+    }
+
+    body.light { background: #f1f1f1; color: black; }
+    body.dark  { background: #0a1f44; color: white; }
+
+    .container {
+        max-width: 500px;
+        margin: auto;
+        padding: 20px;
+        border-radius: 15px;
+        background: rgba(0,0,0,0.2);
+    }
+
+    button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        margin-top: 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .task-btn {
+        width: 100%;
+        margin-top: 8px;
+        background: #555;
+        color: white;
+    }
+
+    .task-done {
+        background: #2ecc71 !important;
+        color: black !important;
+    }
+
+    .success { background: #2ecc71; color: black; }
+    .fail { background: #e74c3c; color: white; }
+
+    #progress {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 5px;
+    }
+
+    .dot {
+        width: 26px;
+        height: 26px;
+        border-radius: 5px;
+    }
+
+    .done { background: #2ecc71; }
+    .miss { background: #e74c3c; }
+    .none { background: #555; }
+
+    #themeBtn {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        padding: 8px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: none;
+        background: #3498db;
+        color: white;
+    }
+</style>
+</head>
+<body class="dark">
+
+<button id="themeBtn">Light Mode</button>
+
+<h1>🌟 30 Ngày Thay Đổi Bản Thân 🌟</h1>
+
+<div class="container">
+
+    <h2 id="dayLabel"></h2>
+    <h3 id="dateLabel"></h3>
+
+    <h3>⏳ Đếm ngược: <span id="countdown"></span></h3>
+
+    <h3>Nhiệm vụ hôm nay</h3>
+
+    <button class="task-btn" id="task1">🏋️ Tập thể dục</button>
+    <button class="task-btn" id="task2">📚 Học bài</button>
+    <button class="task-btn" id="task3">🥛 Uống sữa</button>
+    <button class="task-btn" id="task4">💻 Tắt máy trước 21:45</button>
+
+    <button id="finishBtn" class="success" style="margin-top:20px;">Hoàn thành hôm nay ✔</button>
+
+    <div id="msg" style="margin-top:10px;"></div>
+
+    <h3>📊 Tiến độ</h3>
+    <div id="progress"></div>
+
+</div>
+
+<script>
+    function todayStr() {
+        const d = new Date();
+        return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+    }
+
+    const today = todayStr();
+
+    let dayIndex = Number(localStorage.getItem("dayIndex")) || 1;
+    let lastDone = localStorage.getItem("lastDone");
+    let history = JSON.parse(localStorage.getItem("history") || "[]");
+
+    const dayLabel   = document.getElementById("dayLabel");
+    const dateLabel  = document.getElementById("dateLabel");
+    const msg        = document.getElementById("msg");
+    const progress   = document.getElementById("progress");
+    const finishBtn  = document.getElementById("finishBtn");
+
+    const taskButtons = [
+        document.getElementById("task1"),
+        document.getElementById("task2"),
+        document.getElementById("task3"),
+        document.getElementById("task4")
+    ];
+
+    const tasks = JSON.parse(localStorage.getItem("tasks-"+today) || "[false,false,false,false]");
+
+    // Apply previous task status
+    tasks.forEach((done, i) => {
+        if (done) taskButtons[i].classList.add("task-done");
+    });
+
+    dateLabel.innerHTML = "Hôm nay: " + today;
+    dayLabel.innerHTML  = "Ngày " + dayIndex;
+
+    // FAILURE CHECK
+    if (lastDone && lastDone !== today) {
+        msg.innerHTML = "<div class='fail'>❌ Bạn đã thất bại vì bỏ lỡ ngày hôm qua!</div>";
+        localStorage.clear();
+        dayIndex = 1;
+        history = [];
+    }
+
+    // CLICK TASK
+    taskButtons.forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+            tasks[i] = !tasks[i];
+            btn.classList.toggle("task-done");
+            localStorage.setItem("tasks-"+today, JSON.stringify(tasks));
+        });
+    });
+
+    // COMPLETE DAY
+    finishBtn.addEventListener("click", () => {
+        if (!tasks.every(t => t)) {
+            msg.innerHTML = "<div class='fail'>⚠ Bạn phải hoàn thành tất cả nhiệm vụ!</div>";
+            return;
+        }
+
+        localStorage.setItem("lastDone", today);
+
+        history.push({day: dayIndex, date: today});
+        localStorage.setItem("history", JSON.stringify(history));
+
+        dayIndex++;
+        if (dayIndex > 30) dayIndex = 30;
+
+        localStorage.setItem("dayIndex", dayIndex);
+
+        finishBtn.disabled = true;
+        finishBtn.style.background = "gray";
+        msg.innerHTML = "<div class='success'>✔ Bạn đã hoàn thành hôm nay!</div>";
+
+        renderProgress();
+    });
+
+    // Progress Bar
+    function renderProgress() {
+        progress.innerHTML = "";
+        for (let i = 1; i <= 30; i++) {
+            const box = document.createElement("div");
+            box.classList.add("dot");
+
+            if (history.some(h => h.day === i)) box.classList.add("done");
+            else if (i < dayIndex - 1) box.classList.add("miss");
+            else box.classList.add("none");
+
+            progress.appendChild(box);
+        }
+    }
+    renderProgress();
+
+    // Countdown
+    function updateCountdown() {
+        const now = new Date();
+        const midnight = new Date();
+        midnight.setHours(24,0,0,0);
+
+        let diff = (midnight - now) / 1000;
+        const h = Math.floor(diff / 3600);
+        diff %= 3600;
+        const m = Math.floor(diff / 60);
+        const s = Math.floor(diff % 60);
+
+        document.getElementById("countdown").innerHTML = `${h}h ${m}m ${s}s`;
+    }
+    setInterval(updateCountdown, 1000);
+
+    // Theme Switch
+    document.getElementById("themeBtn").addEventListener("click", () => {
+        if (document.body.classList.contains("dark")) {
+            document.body.classList.replace("dark", "light");
+            themeBtn.innerHTML = "Dark Mode";
+        } else {
+            document.body.classList.replace("light", "dark");
+            themeBtn.innerHTML = "Light Mode";
+        }
+    });
+</script>
+
+</body>
+</html>
